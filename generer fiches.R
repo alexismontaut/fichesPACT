@@ -1,7 +1,7 @@
 
 #install.packages("quarto")
 library(quarto)
-setwd("U:/Investissements B6/webscrapping pour les fiches PACT/fiches html")
+setwd("/home/onyxia/work/fichesPACT/fiches")
 getwd()
 
 #Chaque année, mettre à jour le modèle "fiche_modele.qmd" pour changer les millésimes dans le titres du tableau
