@@ -1,7 +1,7 @@
 
 #install.packages("quarto")
 library(quarto)
-setwd("/home/onyxia/work/fichesPACT/fiches")
+setwd("/home/onyxia/work/fichesPACT")
 getwd()
 
 #Chaque année, mettre à jour le modèle "fiche_modele.qmd" pour changer les millésimes dans le titres du tableau
@@ -25,6 +25,8 @@ generer_fiche <- function(nom, lien_internet, lettre) {
     execute_params = params,
     execute_dir = getwd()
   )
+  
+  file.rename(paste0(lettre,'_',nom,'.html'),paste0("fiches/",lettre,'_',nom,'.html'))
 }
 
 
