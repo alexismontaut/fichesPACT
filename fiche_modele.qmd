@@ -1,0 +1,153 @@
+---
+format: 
+  html:
+    toc: false
+    toc-depth: 4
+    number-sections: true
+    code-fold: false
+    df-print: paged
+editor: visual
+embed-resources: true
+params:
+  title: ""
+  url: ""
+---
+
+```{r}
+#| eval: true
+#| echo: false
+#| message: false
+
+#packages
+library(dplyr)
+library(rvest)
+library(tidyverse)
+library(ggplot2)
+library(kableExtra)
+
+#récupérer toute la page, y compris les balises, etc
+test <- read_html(params$url) 
+
+#récupérer toutes les tables de cette page
+toutes_tables <- test %>%
+  html_table()
+
+#récupérer le titre de la fiche
+titre <- test %>% 
+  html_node('h1') %>% 
+  html_text()
+
+#renvoie une liste avec 80 tableaux, récupérer ceux qui nous intéressent
+POPT3 <- toutes_tables[[1]]
+POPT1 <- toutes_tables[[3]]
+POPT2M <- toutes_tables[[4]]
+POPT3HF <- toutes_tables[[5]]
+
+#mise en forme de POPT3 : les colonnes % (sép décimal point et on met en numéric)
+#POPT3[c(3,5,7)]<- lapply(POPT3[c(3,5,7)], str_replace_all, pattern = ",", replacement = ".")
+#POPT3[c(3,5,7)]<- lapply(POPT3[c(3,5,7)], as.numeric)
+
+#mise en forme de POPT1 : 2eme ligne (sép décimal point)
+#POPT1[2,2:9]<- lapply(POPT1[2,2:9], str_replace_all, pattern = ",", replacement = ".")
+
+#mise en forme de POPT2M : sép décimal en point, et on met en numéric
+#POPT2M[2:8]<- lapply(POPT2M[2:8], str_replace_all, pattern = ",", replacement = ".")
+POPT2M[2:8]<- lapply(POPT2M[2:8], str_replace_all, pattern = "–", replacement = "-")
+#POPT2M[2:8]<- lapply(POPT2M[2:8], as.numeric)
+
+#mise en forme de POPT3HF : on conserve que la 1ere décomp par âge, sép décimal en point, et on met en numéric
+POPT3HF <- POPT3HF[1:8,]
+#POPT3HF[c(3,5)]<- lapply(POPT3HF[c(3,5)], str_replace_all, pattern = ",", replacement = ".")
+#POPT3HF[c(3,5)]<- lapply(POPT3HF[c(3,5)], as.numeric)
+```
+
+# `r params$title` {.unnumbered}
+
+## POP T1 - Population {.unnumbered}
+
+```{r}
+#| eval: true
+#| echo: false  
+#| message: false  
+kable(POPT1) %>%
+  kable_styling(full_width = FALSE, position = "left", font_size = 12) 
+```
+
+<span style="font-size: 11px;"> (\*) 1967 et 1974 pour les DOM.  
+Les données proposées sont établies à périmètre géographique identique, dans la géographie en vigueur au 01/01/2024.  
+Sources : Insee, RP1967 à 1999 dénombrements, RP2010 au RP2021 exploitations principales.
+
+## POP T2M - Indicateurs démographiques {.unnumbered}
+
+```{r}
+#| eval: true
+#| echo: false  
+#| message: false  
+tab <- as.data.frame(POPT2M)
+tab[2,1] <- "- due au solde naturel en %" 
+tab[3,1] <- "- due au solde apparent des entrées sorties en %" 
+kable(tab) %>%
+  kable_styling(full_width = FALSE, position = "left", font_size = 12)
+```
+
+<span style="font-size: 11px;"> Les données proposées sont établies à périmètre géographique identique, dans la géographie en vigueur au 01/01/2024.  
+Sources : Insee, RP1968 à 1999 dénombrements, RP2010 au RP2021 exploitations principales - État civil.
+
+## POP T0 - Population par grandes tranches d'âge {.unnumbered}
+
+```{r}
+#| eval: true
+#| echo: false  
+#| message: false  
+kable(POPT3, align = "lrrrrrr") %>%
+  kable_styling(full_width = FALSE, position = "left", font_size = 12)
+```
+
+<span style="font-size: 11px;"> Sources : Insee, RP2010, RP2015 et RP2021, exploitations principales, géographie au 01/01/2024.
+
+
+
+## POP T3 - Population par sexe et âge en 2021 {.unnumbered}
+
+```{r}
+#| eval: true
+#| echo: false  
+#| message: false  
+
+kable(POPT3HF, align = "lrrrr") %>%
+  kable_styling(full_width = FALSE, position = "left", font_size = 12)
+```
+
+<span style="font-size: 11px;"> Source : Insee, RP2021 exploitation principale, géographie au 01/01/2024.
+
+## POP G2M - Composantes de l'évolution de population {.unnumbered}
+
+```{r}
+#| eval: true
+#| echo: false  
+#| message: false  
+#préparation de la table, en ne gardant que les infos utiles, et ordonnées comme on veut (on transpose notamment, pour qu'elles soient tidy pour ggplot2)
+tab <- as.data.frame(POPT2M)
+tab[2:8]<- lapply(tab[2:8], str_replace_all, pattern = ",", replacement = ".")
+tab[2:8]<- lapply(tab[2:8], as.numeric)
+
+tab <- tab[2:3,]
+tab[1,1] <- "1 - due au solde naturel en %" 
+tab[2,1] <- "2 - due au solde apparent des entrées sorties en %" 
+tab <- tab %>% pivot_longer(cols = starts_with(c("19","20")), names_to = "periode" , values_to = "contrib")
+colnames(tab) <- c("serie","periode","contrib")
+
+#le graphique
+ggplot(tab) +
+  aes(x = periode, fill=serie, y=contrib)+
+  geom_bar(stat= "identity", position = "dodge")+
+  theme(legend.position = "bottom")+
+  ylab("Variation annuelle moyenne en %")+
+  xlab("Période")+
+  scale_y_continuous(breaks = seq(min(tab$contrib), max(tab$contrib), by = 0.1)) +
+  scale_fill_manual(values = c("1 - due au solde naturel en %" = "#ffd320", 
+                               "2 - due au solde apparent des entrées sorties en %" = "#4b1f6f"))
+
+```
+
+<span style="font-size: 11px;"> Source : Insee, séries historiques du RP, exploitations principales – État-civil.
